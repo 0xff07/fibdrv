@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
-
 #define FIB_DEV "/dev/fibonacci"
 
 int main()
@@ -26,6 +26,19 @@ int main()
         printf("Writing to " FIB_DEV ", returned the sequence %lld\n", sz);
     }
 
+
+#ifdef USERSPACE_TIMER
+    for (int i = 0; i <= offset; i++) {
+        struct timespec start, end;
+        lseek(fd, i, SEEK_SET);
+        clock_gettime(CLOCK_MONOTONIC, &start);
+        sz = read(fd, buf, 1);
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        unsigned long duration = 1000000000 * (end.tv_sec - start.tv_sec) +
+                                 (end.tv_nsec - start.tv_nsec);
+        printf("%d, %lu\n", i, duration);
+    }
+#else
     for (int i = 0; i <= offset; i++) {
         lseek(fd, i, SEEK_SET);
         sz = read(fd, buf, 1);
@@ -43,7 +56,7 @@ int main()
                "%lld.\n",
                i, sz);
     }
-
+#endif
     close(fd);
     return 0;
 }

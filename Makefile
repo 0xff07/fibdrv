@@ -18,7 +18,7 @@ $(GIT_HOOKS):
 
 clean:
 	$(MAKE) -C $(KDIR) M=$(PWD) clean
-	$(RM) client out
+	$(RM) client client_timer out
 load:
 	sudo insmod $(TARGET_MODULE).ko
 unload:
@@ -26,6 +26,9 @@ unload:
 
 client: client.c
 	$(CC) -o $@ $^
+
+client_timer: client.c
+	$(CC) -D USERSPACE_TIMER -o $@ $^
 
 PRINTF = env printf
 PASS_COLOR = \e[32;01m
