@@ -9,7 +9,6 @@
 
 ssize_t read_wrapper(int fd, void *buf, size_t count)
 {
-    printf("wrapper entered.\n");
     return read(fd, buf, count);
 }
 
