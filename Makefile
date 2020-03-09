@@ -19,6 +19,8 @@ $(GIT_HOOKS):
 clean:
 	$(MAKE) -C $(KDIR) M=$(PWD) clean
 	$(RM) client client_timer out
+	$(RM) *.png
+	$(RM) *.data
 load:
 	sudo insmod $(TARGET_MODULE).ko
 unload:
