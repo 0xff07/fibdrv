@@ -7,6 +7,16 @@
 #include <unistd.h>
 #define FIB_DEV "/dev/fibonacci"
 
+ssize_t read_wrapper(int fd, void *buf, size_t count)
+{
+    printf("wrapper entered.\n");
+    return read(fd, buf, count);
+}
+
+#undef read
+#define read read_wrapper
+
+
 int main()
 {
     long long sz;
