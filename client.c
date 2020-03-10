@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,12 +17,19 @@ ssize_t read_wrapper(int fd, void *buf, size_t count)
 #define read read_wrapper
 
 
+void biguint_dump(uint64_t *src, int nints)
+{
+    printf("0x");
+    for (int i = nints - 1; i >= 0; i--) {
+        printf("%016lx", src[i]);
+    }
+}
+
+#define BIGUINT_WIDTH 1024
+
 int main()
 {
-    long long sz;
-
-    char buf[1];
-    char write_buf[] = "testing writing";
+    char buf[BIGUINT_WIDTH >> 3] = {0};
     int offset = 100; /* TODO: try test something bigger than the limit */
 
     int fd = open(FIB_DEV, O_RDWR);
@@ -30,18 +38,15 @@ int main()
         exit(1);
     }
 
-    for (int i = 0; i <= offset; i++) {
-        sz = write(fd, write_buf, strlen(write_buf));
-        printf("Writing to " FIB_DEV ", returned the sequence %lld\n", sz);
-    }
-
-
-#ifdef USERSPACE_TIMER
+#ifdef CLOCK_TIMER
     for (int i = 0; i <= offset; i++) {
         struct timespec start, end;
+        off_t err = 0;
         lseek(fd, i, SEEK_SET);
         clock_gettime(CLOCK_MONOTONIC, &start);
-        sz = read(fd, buf, 1);
+        read(fd, buf, BIGUINT_WIDTH >> 3);
+        printf("%d, ", i);
+        biguint_dump((uint64_t *) &buf[0], BIGUINT_WIDTH >> 6);
         clock_gettime(CLOCK_MONOTONIC, &end);
         unsigned long duration = 1000000000 * (end.tv_sec - start.tv_sec) +
                                  (end.tv_nsec - start.tv_nsec);
@@ -50,20 +55,20 @@ int main()
 #else
     for (int i = 0; i <= offset; i++) {
         lseek(fd, i, SEEK_SET);
-        sz = read(fd, buf, 1);
-        printf("Reading from " FIB_DEV
-               " at offset %d, returned the sequence "
-               "%lld.\n",
-               i, sz);
+        read(fd, buf, BIGUINT_WIDTH >> 3);
+        printf("Reading from " FIB_DEV " at offset %d, returned the sequence ",
+               i);
+        biguint_dump((uint64_t *) buf, BIGUINT_WIDTH >> 6);
+        printf(".\n");
     }
 
     for (int i = offset; i >= 0; i--) {
         lseek(fd, i, SEEK_SET);
-        sz = read(fd, buf, 1);
-        printf("Reading from " FIB_DEV
-               " at offset %d, returned the sequence "
-               "%lld.\n",
-               i, sz);
+        read(fd, buf, BIGUINT_WIDTH >> 3);
+        printf("Reading from " FIB_DEV " at offset %d, returned the sequence ",
+               i);
+        biguint_dump((uint64_t *) buf, BIGUINT_WIDTH >> 6);
+        printf(".\n");
     }
 #endif
     close(fd);

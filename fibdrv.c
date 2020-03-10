@@ -6,6 +6,9 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
+#include <linux/uaccess.h>
+
+#include "biguint.h"
 
 MODULE_LICENSE("Dual MIT/GPL");
 MODULE_AUTHOR("National Cheng Kung University, Taiwan");
@@ -17,27 +20,12 @@ MODULE_VERSION("0.1");
 /* MAX_LENGTH is set to 92 because
  * ssize_t can't fit the number > 92
  */
-#define MAX_LENGTH 92
+#define MAX_LENGTH 1000
 
 static dev_t fib_dev = 0;
 static struct cdev *fib_cdev;
 static struct class *fib_class;
 static DEFINE_MUTEX(fib_mutex);
-
-static long long fib_sequence(long long k)
-{
-    /* FIXME: use clz/ctz and fast algorithms to speed up */
-    long long f[k + 2];
-
-    f[0] = 0;
-    f[1] = 1;
-
-    for (int i = 2; i <= k; i++) {
-        f[i] = f[i - 1] + f[i - 2];
-    }
-
-    return f[k];
-}
 
 static int fib_open(struct inode *inode, struct file *file)
 {
@@ -54,15 +42,35 @@ static int fib_release(struct inode *inode, struct file *file)
     return 0;
 }
 
-/* calculate the fibonacci number at given offset */
-static ssize_t fib_read(struct file *file,
-                        char *buf,
-                        size_t size,
-                        loff_t *offset)
+#define FIB_BUFSZ 16
+static ssize_t fib_read_large(struct file *file,
+                              char *buf,
+                              size_t size,
+                              loff_t *offset)
 {
-    return (ssize_t) fib_sequence(*offset);
-}
+    uint64_t src1[FIB_BUFSZ] = {1};
+    uint64_t src2[FIB_BUFSZ] = {0};
+    uint64_t src3[FIB_BUFSZ] = {0};
+    uint64_t *a1 = &src1[0];
+    uint64_t *a2 = &src2[0];
+    uint64_t *a3 = &src3[0];
+    int carry = 0;
+    for (int i = 1; i <= (*offset); i++) {
+        carry = biguint_add(a3, a1, a2, FIB_BUFSZ);
+        uint64_t *tmp = a1;
+        a1 = a2;
+        a2 = a3;
+        a3 = tmp;
+    }
+    if (carry)
+        goto err_overflow;
 
+    unsigned long ret = copy_to_user(buf, (char *) a2, size);
+    return (size - ret);
+
+err_overflow:
+    return -1;
+}
 /* write operation is skipped */
 static ssize_t fib_write(struct file *file,
                          const char *buf,
@@ -97,7 +105,7 @@ static loff_t fib_device_lseek(struct file *file, loff_t offset, int orig)
 
 const struct file_operations fib_fops = {
     .owner = THIS_MODULE,
-    .read = fib_read,
+    .read = fib_read_large,
     .write = fib_write,
     .open = fib_open,
     .release = fib_release,

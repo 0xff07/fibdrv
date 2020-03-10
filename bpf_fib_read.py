@@ -39,8 +39,8 @@ int ret_handler(struct pt_regs *ctx)
 """
 
 b = BPF(text=prog)
-b.attach_kprobe(event="fib_read", fn_name="probe_handler")
-b.attach_kretprobe(event="fib_read", fn_name="ret_handler")
+b.attach_kprobe(event="fib_read_large", fn_name="probe_handler")
+b.attach_kretprobe(event="fib_read_large", fn_name="ret_handler")
 
 while 1:
     try:
