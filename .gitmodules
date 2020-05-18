@@ -1,0 +1,4 @@
+[submodule "bignum"]
+	path = bignum
+	url = https://github.com/0xff07/bignum.git
+	branch = kernel

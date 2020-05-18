@@ -8,6 +8,7 @@
 #include <linux/mutex.h>
 #include <linux/uaccess.h>
 
+#include "bignum/fibonacci.h"
 #include "biguint.h"
 
 MODULE_LICENSE("Dual MIT/GPL");
@@ -42,35 +43,27 @@ static int fib_release(struct inode *inode, struct file *file)
     return 0;
 }
 
-#define FIB_BUFSZ 16
-static ssize_t fib_read_large(struct file *file,
-                              char *buf,
-                              size_t size,
-                              loff_t *offset)
+static ssize_t fib_read_bn(struct file *file,
+                           char *buf,
+                           size_t size,
+                           loff_t *offset)
 {
-    uint64_t src1[FIB_BUFSZ] = {1};
-    uint64_t src2[FIB_BUFSZ] = {0};
-    uint64_t src3[FIB_BUFSZ] = {0};
-    uint64_t *a1 = &src1[0];
-    uint64_t *a2 = &src2[0];
-    uint64_t *a3 = &src3[0];
-    int carry = 0;
-    for (int i = 1; i <= (*offset); i++) {
-        carry = biguint_add(a3, a1, a2, FIB_BUFSZ);
-        uint64_t *tmp = a1;
-        a1 = a2;
-        a2 = a3;
-        a3 = tmp;
-    }
-    if (carry)
-        goto err_overflow;
+    bn_t fib = BN_INITIALIZER;
+    fibonacci(*offset, fib);
 
-    unsigned long ret = copy_to_user(buf, (char *) a2, size);
+    char *res = kzalloc(*offset / 4 + 1, GFP_KERNEL);
+    if (!res)
+        goto err_oom;
+
+    bn_snprint(fib, 10, res, *(offset) / 4);
+    size_t ret = copy_to_user(buf, res, size);
     return (size - ret);
 
-err_overflow:
-    return -1;
+err_oom:
+    printk(KERN_ALERT "Failed to allocate memory");
+    return -ENOMEM;
 }
+
 /* write operation is skipped */
 static ssize_t fib_write(struct file *file,
                          const char *buf,
@@ -105,7 +98,7 @@ static loff_t fib_device_lseek(struct file *file, loff_t offset, int orig)
 
 const struct file_operations fib_fops = {
     .owner = THIS_MODULE,
-    .read = fib_read_large,
+    .read = fib_read_bn,
     .write = fib_write,
     .open = fib_open,
     .release = fib_release,
