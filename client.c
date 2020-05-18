@@ -16,9 +16,10 @@ ssize_t read_wrapper(int fd, void *buf, size_t count)
 #undef read
 #define read read_wrapper
 
+#define BUFLEN 8192
 int main()
 {
-    char buf[BIGUINT_WIDTH >> 3] = {0};
+    char buf[BUFLEN] = {0};
     int offset = 100; /* TODO: try test something bigger than the limit */
 
     int fd = open(FIB_DEV, O_RDWR);
@@ -33,7 +34,7 @@ int main()
         off_t err = 0;
         lseek(fd, i, SEEK_SET);
         clock_gettime(CLOCK_MONOTONIC, &start);
-        read(fd, buf, BIGUINT_WIDTH >> 3);
+        read(fd, buf, BUFLEN);
         printf("%d, ", i);
         printf("%s", buf);
         clock_gettime(CLOCK_MONOTONIC, &end);
@@ -44,7 +45,7 @@ int main()
 #else
     for (int i = 0; i <= offset; i++) {
         lseek(fd, i, SEEK_SET);
-        read(fd, buf, BIGUINT_WIDTH >> 3);
+        read(fd, buf, BUFLEN);
         printf("Reading from " FIB_DEV " at offset %d, returned the sequence ",
                i);
         printf("%s", buf);
@@ -53,7 +54,7 @@ int main()
 
     for (int i = offset; i >= 0; i--) {
         lseek(fd, i, SEEK_SET);
-        read(fd, buf, BIGUINT_WIDTH >> 3);
+        read(fd, buf, BUFLEN);
         printf("Reading from " FIB_DEV " at offset %d, returned the sequence ",
                i);
         printf("%s", buf);
