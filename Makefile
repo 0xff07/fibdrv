@@ -1,9 +1,10 @@
 CONFIG_MODULE_SIG = n
-TARGET_MODULE := fibdrv
+TARGET_MODULE := fibdrv_mudule
 
 obj-m := $(TARGET_MODULE).o 
 
 $(TARGET_MODULE)-y = \
+	fibdrv.o \
 	bignum/bignum.o \
 	bignum/apm.o \
 	bignum/sqr.o \

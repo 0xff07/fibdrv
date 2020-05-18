@@ -9,7 +9,6 @@
 #include <linux/uaccess.h>
 
 #include "bignum/fibonacci.h"
-#include "biguint.h"
 
 MODULE_LICENSE("Dual MIT/GPL");
 MODULE_AUTHOR("National Cheng Kung University, Taiwan");
