@@ -30,6 +30,7 @@ clean:
 	$(RM) client client_timer out
 	$(RM) *.png
 	$(RM) *.data
+	$(RM) expected.txt
 load:
 	sudo insmod $(TARGET_MODULE).ko
 unload:
@@ -51,5 +52,6 @@ check: all
 	$(MAKE) load
 	sudo ./client > out
 	$(MAKE) unload
-	@diff -u out scripts/expected.txt && $(call pass)
-	@scripts/verify.py
+	python3 scripts/fib-gen.py > expected.txt
+	@diff -u out expected.txt && $(call pass)
+	@rm expected.txt out

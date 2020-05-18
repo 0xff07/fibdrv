@@ -20,7 +20,7 @@ MODULE_VERSION("0.1");
 /* MAX_LENGTH is set to 92 because
  * ssize_t can't fit the number > 92
  */
-#define MAX_LENGTH 1000
+#define MAX_LENGTH 5000
 
 static dev_t fib_dev = 0;
 static struct cdev *fib_cdev;
@@ -49,17 +49,19 @@ static ssize_t fib_read_bn(struct file *file,
 {
     bn_t fib = BN_INITIALIZER;
     fibonacci(*offset, fib);
+    size_t bufsize = (*offset) / 4 + 5;
+    char *res = kzalloc(bufsize, GFP_KERNEL);
+    if (!res) {
+        printk(KERN_ALERT "Failed to allocate memory");
+        goto failed_mem;
+    }
 
-    char *res = kzalloc(*offset / 4 + 1, GFP_KERNEL);
-    if (!res)
-        goto err_oom;
-
-    bn_snprint(fib, 10, res, *(offset) / 4);
-    size_t ret = copy_to_user(buf, res, size);
+    bn_snprint(fib, 10, res, bufsize);
+    size_t ret = copy_to_user(buf, res, size < bufsize ? size : bufsize);
+    kfree(res);
     return (size - ret);
 
-err_oom:
-    printk(KERN_ALERT "Failed to allocate memory");
+failed_mem:
     return -ENOMEM;
 }
 
